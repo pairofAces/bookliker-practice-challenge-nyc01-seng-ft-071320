@@ -1,114 +1,120 @@
-document.addEventListener("DOMContentLoaded", function() {
-    //first create global variables for the html area's I need to add the books into
-    const list = document.querySelector('ul#list')
-    const showPanel = document.querySelector('div#show-panel')
-    const self = {"id":1, "username":"pouros"}
+document.addEventListener('DOMContentLoaded', e => {
+    //set global variables
+    const baseUrl = "http://localhost:3000/books/"
+    const list = document.getElementById('list')
+    const showPanel = document.getElementById('show-panel')
+    const user = { "id": 1, "username": "pouros" }
+    //show the list of books in a list format
+    //first make a get request to get all the books and then render the books as a list
 
-    const bookUrl = 'http://localhost:3000/books/'
-    // console.log(list, showPanel)
-
-    //fetch the data for ALL THE BOOKS
-    function getBooks () {
-        fetch(bookUrl)
-        .then(resp => resp.json())
-        .then(books => {
-            renderBooks(books);
-            window.allBooks = books
-        }) //aspirational code to renderBooks(books)
+    const getData = () => {
+        fetch(baseUrl)
+            .then(resp => resp.json())
+            .then(books => renderBooks(books)) //aspirational
     }
 
-    //create the renderBooks (PLURAL) function
     function renderBooks(books) {
         for (const book of books) {
-            renderBook(book)
-        }
+            renderBook(book);
+        };
     }
-    
+
     function renderBook(book) {
-        let bookLi = document.createElement('li')
-        bookLi.innerHTML = `<li id="${book.id}" class="book">${book.title}</li>`
-        list.append(bookLi)
-        // debugger
+        //create a new li for each book
+        //add classname book
+        // add dataset id
+        //the list should display the title of each book
+        let li = document.createElement('li')
+        li.classList.add('book')
+        li.dataset.id = book.id
+        li.innerHTML = `${book.title}`
+
+        //append to the list
+        list.append(li)
     }
 
-    //create the function to show the book details
-    function showBook(book) {
-        showPanel.innerHTML = `
-        <img src=${book.img_url}/>
-        <h3>${book.title}</h3>
-        <h4>${book.subtitle}</h4>
-        <h5>${book.author}</h5>
-        <p>${book.description}</p>
-        `
-        let ul = document.createElement("ul")
-        showPanel.append(ul)
-        // let users = `${book.users}`
+    //create the ability to click on the title, and be shown details of each book
 
-        for (const user of book.users) {
+    const clickHandler = () => {
+        list.addEventListener('click', e => {
+            // console.log(e.target)
+            // const book = e.target
+            const id = e.target.dataset.id
+
+            fetch(baseUrl + id)
+                .then(resp => resp.json())
+                .then(info => showInfo(info)) //aspirational
+
+
+            function showInfo(info) {
+                //create the info elements
+                // appendChild to the show-panel variable
+                showPanel.innerHTML = `
+                    <img src="${info.img_url}">
+                    <h3>${info.title}</h3>
+                    <h5>${info.subtitle}</h5>
+                    <h4>${info.author}</h4>
+                    <p>${info.description}</p>
+                    <ul class="ul-class"></ul>
+                    <button class="like-class" data-id=${info.id}>Like</button>
+                `
+                likedList(info)
+            }
+
+        })
+    }
+
+    function likedList(info) {
+        let likeList = document.querySelector('.ul-class')
+        likeList.classList.add('liked-list')
+        // showPanel.insertAdjacentElement('beforeend', likedList)
+
+        //version of iterating 'for' loop
+        for (i = 0; `${info.users.length}`; i++) {
             let li = document.createElement('li')
-            li.innerHTML = user.username
-            ul.append(li)
+            li.innerText = `${info.users[i].username}`
+            likeList.append(li)
         }
-        // debugger
-
-        //create the like button with the corresponding id for each book
-            //with the id, we can associate the button with appropriate users
-        let likeButton = document.createElement('button')
-        likeButton.innerHTML = "LIKE"
-        likeButton.bookId = book.id
-        likeButton.dataset.bookUsers = book.users
-        showPanel.append(likeButton)        
-    };
-
-    //fetch data from a single book -> useful for the PATCH request
-   
-    function getBook(obj) {
-        fetch(bookUrl + obj.id)
-        .then(response => response.json());
     }
-
-    //Create the function to PATCH book details
-    const patchBook = (button) => {
-        getBook(button)
-        .then((obj) => {
-          let user = { id: 1, username: "pouros" };
-          let bookUsers = obj.users;
-          bookUsers.push(user);
-          
-          const options = {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-            },
-            body: JSON.stringify({ users: bookUsers }),
-          };
-          fetch(bookUrl + button.id, options)
-            .then(resp => resp.json())
-            .then(showBook);
-        });
-    }
-  
     
-    
-    function clickHandler() {
+    const likeBook = () => {
+        let button = document.querySelector('.like-class')
         document.addEventListener('click', e => {
-            if (e.target.matches('li.book')){
-                let clickedBook = allBooks.find(book => {
-                    return book.id == e.target.id
-                })
-                // debugger
-                showBook(clickedBook);
-            } else if (e.target.matches('button')) {
-                let button = e.target
-                patchBook(button)
+            if (e.target.innerText === "Like") {
+                let id = e.target.dataset.id
+                updateLikes(id) //aspirational code
+                e.target.innerText = "Unlike"
+            } else if (e.target.innerText === "Unlike") {
+                let ul = showPanel.querySelector('ul')
+                let li = showPanel.querySelector('.pouros')
+                ul.removeChild(li)
+                e.target.innerText = "Like"
             }
         })
     }
-    
+
+    function updateLikes(id){
+        //create options for 'patch' request
+        options = {
+            method: "PATCH",
+            headers: {
+                "content-type": "application/json",
+                "accept": "application.json"
+            },
+            body: JSON.stringify({
+                users: [user]
+            })
+        }
+        fetch(baseUrl + id, options)
+        .then(resp => resp.json())
+        .then(showPanel.querySelector('ul').insertAdjacentHTML('beforeend',`<li class="pouros">pouros</li>`))
+    }
 
 
-    //invoke the functions
-    getBooks()
+
+
+    //invoke the appropriate functions
+    getData()
     clickHandler()
-});
+    likeBook()
+})
